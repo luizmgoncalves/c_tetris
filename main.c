@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <conio.h>
 
 #define COLUMNS 30
@@ -184,35 +185,59 @@ void rotate(char piece[PL][PC]){
     normalize(piece);
 }
 
-void blit(char matrix[LINES][COLUMNS+1], char piece[PL][PC], int x, int y){
+void blit(char matrix[LINES][COLUMNS+1], struct piece_model *piece){
     int i, j;
 
     for (i=0; i < PL; i++){
         for (j=0; j < PC-1 ; j++){
-            matrix[y+i][x+j] = piece[i][j];
+            if (piece->piece[i][j] == CL);
+                matrix[piece->y+i][piece->x+j] = piece->piece[i][j];
         }
     }
 }
 
+void move_piece_on_board(char matrix[LINES][COLUMNS+1], struct piece_model *piece, int x, int y){
+    int i, j;
+
+    for (i=0; i < PL; i++){
+        for (j=0; j < PC-1 ; j++){
+            if(piece->y+i+y>=LINES || piece->x+j+x>=COLUMNS  || piece->y+i+y<0 || piece->x+j+x<0){
+                printf("Colidiu com a borda\n");
+                return ;
+            }
+            if(x+j<PC-1 && y+i<PL){
+                continue;
+            }
+            if(piece->piece[y+i][x+j] == CL && matrix[piece->y+i+y][piece->x+j+x] == CL){
+                return ;
+            }
+        }
+    }
+
+    piece->y += y;
+    piece->x += x;
+}
+
 int main(){
     char matrix[LINES][COLUMNS+1];
-    struct piece_model *pieces, piece1;
+    struct piece_model *pieces, piece;
 
     fill_board(matrix, BG);
 
     pieces = aloc_memory();
 
+    pieces[0].x = 0, pieces[0].y = 0;
 
-    printf("%s\n", matrix);
+    int i;
+    for (i=0; i<10; i++){
+        fill_board(matrix, BG);
+        blit(matrix, &pieces[0]);
+        printf("%s\n", matrix);
+        move_piece_on_board(matrix, &pieces[0], 0, 1);
+        sleep(2);
+        system("cls");
+    }
 
-    printf("%s\n\n", pieces[3].piece);
-    rotate(pieces[3].piece);
-    printf("%s\n\n", pieces[3].piece);
-    rotate(pieces[3].piece);
-    printf("%s\n\n", pieces[3].piece);
-    rotate(pieces[3].piece);
-    printf("%s\n\n", pieces[3].piece);
-    rotate(pieces[3].piece);
 
     return 0;
 }
