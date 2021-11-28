@@ -6,8 +6,8 @@
 #define LINES 10
 #define PL 4
 #define PC 5
-#define BG 'z'+54
-#define CL 'z'+97
+#define BG -80 // 'z'+54 or backgorund ascii character "░"
+#define CL -37 // 'z'+97 or filled block ascii character "█"
 
 struct piece_model {
     int x;
@@ -60,7 +60,9 @@ void fill_l(char piece[PL][PC]){
 void fill_p_triangle(char piece[PL][PC]){
     int i, j;
     for (i=0; i<PL; i++){
-        for(j=0; j<PC-1; j++) piece[i][j] = BG;
+        for(j=0; j<PC-1; j++){
+            piece[i][j] =  BG;
+        }
         piece[i][j] = '\n';
     }
     piece[--i][j] = '\0';
@@ -101,11 +103,67 @@ void fill_board(char matrix[LINES][COLUMNS+1], char value){
 
     for (i=0; i < LINES; i++){
         for (j=0; j < COLUMNS ; j++){
-            matrix[i][j] = 'z'+54;
+            matrix[i][j] = value;
         }
         matrix[i][j] = '\n';
     }
     matrix[--i][j] = '\0';
+}
+
+void left_piece(char piece[PL][PC]){
+    int i, j;
+
+    for(i=0; i<PL; i++){
+        for (j=1; j<PC-1; j++) {
+            piece[i][j-1] = piece[i][j];
+        }
+    }
+
+    j--;
+
+    for (i=0; i<PL; i++) 
+        piece[i][j] = BG;
+    
+}
+
+void up_piece(char piece[PL][PC]){
+    int i, j;
+
+    for(i=1; i<PL; i++){
+        for (j=0; j<PC-1; j++) {
+            piece[i-1][j] = piece[i][j];
+        }
+    }
+
+    i--;
+
+    for (j=0; j<PC-1; j++) 
+        piece[i][j] = BG;
+    
+}
+
+void normalize(char piece[PL][PC]){
+    int to_up, to_left;
+    int i, j;
+
+
+    while (1){
+        to_up = 1, to_left = 1;
+        for(i=0; i<PL; i++){ 
+            if (piece[i][0] != BG) to_left=0;
+        }
+
+        for (j=0; j<PC-1; j++){
+                if (piece[0][j] != BG){ 
+                    to_up=0;
+                }
+        }
+
+        if (to_up) up_piece(piece);
+        if (to_left) left_piece(piece);
+        if (!(to_up||to_left)) break;
+    }
+
 }
 
 void rotate(char piece[PL][PC]){
@@ -113,23 +171,25 @@ void rotate(char piece[PL][PC]){
     int i, j;
 
     for(i=0; i<PL; i++){
-        for (j=0; j<PC-1; j++) 
-            prov[j][i] = piece[i][j];
+        for (j=0; j<PC-1; j++) {
+            prov[PC-1-1-j][i] = piece[i][j];
+        }
     }
 
     for(i=0; i<PL; i++){
         for (j=0; j<PC-1; j++)
             piece[i][j] = prov[i][j];
     }
+
+    normalize(piece);
 }
 
 void blit(char matrix[LINES][COLUMNS+1], char piece[PL][PC], int x, int y){
     int i, j;
 
-    for (i=0; i < LINES; i++){
-        for (j=0; j < COLUMNS ; j++){
-            if(i>=y && i< y+PL && j >= x && j < x+PC-1) 
-                matrix[i][j] = piece[i-y][j-x];
+    for (i=0; i < PL; i++){
+        for (j=0; j < PC-1 ; j++){
+            matrix[y+i][x+j] = piece[i][j];
         }
     }
 }
@@ -138,25 +198,21 @@ int main(){
     char matrix[LINES][COLUMNS+1];
     struct piece_model *pieces, piece1;
 
-    fill_board(matrix, 'z'+54);
+    fill_board(matrix, BG);
 
     pieces = aloc_memory();
 
-    piece1 = pieces[3];
-
-    rotate(piece1.piece);
-    rotate(piece1.piece);
-    rotate(piece1.piece);
-
-    blit(matrix, piece1.piece, 0, 0);
 
     printf("%s\n", matrix);
 
-    printf("%s\n\n", pieces->piece);
-    printf("%s\n\n", pieces[1].piece);
-    printf("%s\n\n", pieces[2].piece);
     printf("%s\n\n", pieces[3].piece);
-    printf("%s\n\n", pieces[4].piece);
+    rotate(pieces[3].piece);
+    printf("%s\n\n", pieces[3].piece);
+    rotate(pieces[3].piece);
+    printf("%s\n\n", pieces[3].piece);
+    rotate(pieces[3].piece);
+    printf("%s\n\n", pieces[3].piece);
+    rotate(pieces[3].piece);
 
     return 0;
 }
