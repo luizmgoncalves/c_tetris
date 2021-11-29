@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <windows.h>
 #include <conio.h>
 
 #define COLUMNS 30
@@ -261,7 +262,8 @@ void copy_matrix(char copy[LINES][COLUMNS+1], char matrix[LINES][COLUMNS+1]){
 
 int main(){
     char matrix[LINES][COLUMNS+1];
-    char running=1, frames;
+    char running=1, changes=0;
+    int op, frames;
     char static_matrix[LINES][COLUMNS+1];
     struct piece_model piece;
 
@@ -272,25 +274,34 @@ int main(){
     random_piece(&piece);
     piece.x = 0, piece.y = 0;
 
-    for (;running; frames++, frames %= 30){
+    for (;running; frames++, frames %= 300){
         copy_matrix(static_matrix, matrix);
         blit(matrix, &piece);
-        printf("%s\n\n", matrix);
+        if (frames==1 || changes){
+            printf("%s\n\n", matrix);
+            changes = 0;
+        }
         
-        if (!(frames%15))
+        if (frames==0){
             move_piece_on_board(static_matrix, &piece, 0, 1);
+            changes = 1;
+        }
 
         if(kbhit()){
-            switch (getch())
+            op = getch();
+            switch (op)
             {
             case 'a':
                 move_piece_on_board(static_matrix, &piece, -1, 0);
+                changes = 1;
                 break;
             case 'd':
                 move_piece_on_board(static_matrix, &piece, 1, 0);
+                changes = 1;
                 break;
             case 'w':
                 rotate(piece.piece);
+                changes = 1;
                 break;
             case 's':
                 running = 0;
@@ -300,8 +311,9 @@ int main(){
             }
         }
 
-        sleep(0.1);
-        system("cls");
+        Sleep(1);
+        if (frames==0 || changes)
+            system("cls");
     }
 
 
