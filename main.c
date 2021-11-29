@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include <conio.h>
 
 #define COLUMNS 30
@@ -87,17 +88,6 @@ void fill_p_stair(char piece[PL][PC]){
     piece[1][1] = CL;
     piece[2][1] = CL;
 }
-
-struct piece_model* aloc_memory(){
-    struct piece_model *memory = (struct piece_model*) malloc(sizeof(struct piece_model)*8);
-    fill_square(memory->piece);
-    fill_line((memory+1)->piece);
-    fill_l((memory+2)->piece);
-    fill_p_triangle((memory+3)->piece);
-    fill_p_stair((memory+4)->piece);
-
-    return memory;
-};
 
 void fill_board(char matrix[LINES][COLUMNS+1], char value){
     int i, j;
@@ -190,26 +180,67 @@ void blit(char matrix[LINES][COLUMNS+1], struct piece_model *piece){
 
     for (i=0; i < PL; i++){
         for (j=0; j < PC-1 ; j++){
-            if (piece->piece[i][j] == CL);
+            if (piece->y+i>=LINES || piece->x+j>=COLUMNS || piece->y+i<0 || piece->x+j<0)
+                continue ;
+            
+            if (piece->piece[i][j] == CL)
                 matrix[piece->y+i][piece->x+j] = piece->piece[i][j];
         }
     }
 }
 
-void move_piece_on_board(char matrix[LINES][COLUMNS+1], struct piece_model *piece, int x, int y){
+void random_piece(struct piece_model *piece){
+    int op;
+    srand(time(NULL));
+    op = rand()%5;
+    switch (op)
+    {
+    case 0:
+        fill_square(piece->piece);
+        break;
+    case 1:
+        fill_line(piece->piece);
+        break;
+    case 2:
+        fill_l(piece->piece);
+        break;
+    case 3:
+        fill_p_stair(piece->piece);
+        break;
+    case 4:
+        fill_p_triangle(piece->piece);
+        break;
+    }
+    
+    piece->x = 0, piece->y = 0;
+}
+
+void move_piece_on_board(char static_matrix[LINES][COLUMNS+1], struct piece_model *piece, int x, int y){
     int i, j;
 
     for (i=0; i < PL; i++){
         for (j=0; j < PC-1 ; j++){
-            if(piece->y+i+y>=LINES || piece->x+j+x>=COLUMNS  || piece->y+i+y<0 || piece->x+j+x<0){
-                printf("Colidiu com a borda\n");
+            if(piece->y+i+y>=LINES &&  piece->piece[i][j] == CL){
+                // is touching board bottom border
+                blit(static_matrix, piece);
+                random_piece(piece);
                 return ;
             }
-            if(x+j<PC-1 && y+i<PL){
-                continue;
+            if(piece->x+j+x>=COLUMNS &&  piece->piece[i][j] == CL){
+                // is touching board right border
+                x = 0;
             }
-            if(piece->piece[y+i][x+j] == CL && matrix[piece->y+i+y][piece->x+j+x] == CL){
-                return ;
+            if(piece->x+j+x<0){
+                // is touching board left border
+                x = 0;
+            }
+            if(piece->piece[i][j] == CL && static_matrix[piece->y+i+y][piece->x+j+x] == CL){
+                if (y==1){
+                    blit(static_matrix, piece);
+                    random_piece(piece);
+                    return ;
+                }
+                x = 0;
             }
         }
     }
@@ -218,23 +249,58 @@ void move_piece_on_board(char matrix[LINES][COLUMNS+1], struct piece_model *piec
     piece->x += x;
 }
 
+void copy_matrix(char copy[LINES][COLUMNS+1], char matrix[LINES][COLUMNS+1]){
+    int i, j;
+
+    for (i=0; i < LINES; i++){
+        for (j=0; j < COLUMNS+1 ; j++){
+            matrix[i][j] = copy[i][j];
+        }
+    }
+}
+
 int main(){
     char matrix[LINES][COLUMNS+1];
-    struct piece_model *pieces, piece;
+    char running=1, frames;
+    char static_matrix[LINES][COLUMNS+1];
+    struct piece_model piece;
 
-    fill_board(matrix, BG);
+    fill_board(static_matrix, BG);
 
-    pieces = aloc_memory();
+    copy_matrix(static_matrix, matrix);
 
-    pieces[0].x = 0, pieces[0].y = 0;
+    random_piece(&piece);
+    piece.x = 0, piece.y = 0;
 
-    int i;
-    for (i=0; i<10; i++){
-        fill_board(matrix, BG);
-        blit(matrix, &pieces[0]);
-        printf("%s\n", matrix);
-        move_piece_on_board(matrix, &pieces[0], 0, 1);
-        sleep(2);
+    for (;running; frames++, frames %= 30){
+        copy_matrix(static_matrix, matrix);
+        blit(matrix, &piece);
+        printf("%s\n\n", matrix);
+        
+        if (!(frames%15))
+            move_piece_on_board(static_matrix, &piece, 0, 1);
+
+        if(kbhit()){
+            switch (getch())
+            {
+            case 'a':
+                move_piece_on_board(static_matrix, &piece, -1, 0);
+                break;
+            case 'd':
+                move_piece_on_board(static_matrix, &piece, 1, 0);
+                break;
+            case 'w':
+                rotate(piece.piece);
+                break;
+            case 's':
+                running = 0;
+                break;
+            default:
+                break;
+            }
+        }
+
+        sleep(0.1);
         system("cls");
     }
 
